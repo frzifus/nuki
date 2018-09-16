@@ -1,4 +1,4 @@
 # TODO
-[ ] test nuki.go
-[ ] write documentation
-[ ] implement remaining todos
+- [ ] test nuki.go
+- [ ] write documentation
+- [ ] implement remaining todos
