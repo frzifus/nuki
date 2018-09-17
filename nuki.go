@@ -135,7 +135,7 @@ func (n *Nuki) LockState(nukiID int) (*LockStateResponse, error) {
 // noWait: indicating whether or not to wait for the lock action to complete and
 // return its result
 func (n *Nuki) LockAction(nukiID int, action Action, noWait bool) (*LockActionResponse, error) {
-	const path = "lockState"
+	const path = "lockAction"
 	param := url.Values{}
 	param.Set("nukiId", strconv.Itoa(nukiID))
 	param.Set("action", strconv.Itoa(int(action)))
