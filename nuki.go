@@ -110,7 +110,6 @@ func (n *Nuki) List() ([]ListResponse, error) {
 	param := url.Values{}
 	param.Set("token", n.token)
 	var list []ListResponse
-	fmt.Println("todo")
 	if err := n.doRequest(http.MethodGet, path, &list, param); err != nil {
 		return nil, err
 	}
