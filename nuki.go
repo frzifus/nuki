@@ -217,25 +217,25 @@ func (n *Nuki) CallbackRemove(callbackID int) (*CallbackReponse, error) {
 
 // Log returns a log of the Bridge
 func (n *Nuki) Log() (*LogResponse, error) {
-	panic("not implemented yet")
+	return nil, ErrNotImplemented
 }
 
 // ClearLog clears the log of the Bridge
 func (n *Nuki) ClearLog() error {
-	panic("not implemented yet")
+	return ErrNotImplemented
 }
 
 // FWUpdate immediately checks for a new firmware update and installs it
 func (n *Nuki) FWUpdate() error {
-	panic("not implemented yet")
+	return ErrNotImplemented
 }
 
 // Reboot s the bridge
 func (n *Nuki) Reboot() error {
-	panic("not implemented yet")
+	return ErrNotImplemented
 }
 
 // FactoryReset performs a factory reset
 func (n *Nuki) FactoryReset() error {
-	panic("not implemented yet")
+	return ErrNotImplemented
 }

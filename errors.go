@@ -9,6 +9,8 @@ import (
 )
 
 var (
+	// ErrNotImplemented function not implemented
+	ErrNotImplemented = errors.New("not implemented")
 	// ErrAuthFailed Auth() failed
 	ErrAuthFailed = errors.New("authentication failed")
 	// ErrInvalidURL : 400
