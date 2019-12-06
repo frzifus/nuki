@@ -28,7 +28,7 @@ type Nuki struct {
 	http    Client
 }
 
-// Option is used
+// Option allows additional options to be specified for a nuki client
 type Option func(*Nuki)
 
 // WithToken allows to set a token when creating a Nuki.

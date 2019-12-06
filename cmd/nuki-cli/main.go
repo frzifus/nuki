@@ -5,9 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/frzifus/nuki"
 )
@@ -55,7 +56,8 @@ type config struct {
 }
 
 func main() {
-	log.Printf("Version %s\n", version)
+	logger := log.New()
+	logger.Infof("Version %s", version)
 	var n *nuki.Nuki
 	if conf.Auth {
 		n = nuki.NewNuki(conf.IP, conf.Port)
@@ -89,42 +91,58 @@ func main() {
 	case "list":
 		list, err := n.List()
 		if err != nil {
-			log.Fatalln(err)
+			logger.Fatalln(err)
 		}
 		for _, x := range list {
-			fmt.Printf("%s %s %s", x.NukiID, x.Name, x.LastKnownState)
+			logger.WithFields(log.Fields{
+				"action":          "list",
+				"nukiID":          x.NukiID,
+				"name":            x.Name,
+				"state":           x.LastKnownState.StateName,
+				"batteryCritical": x.LastKnownState.BatteryCritical,
+			}).Info()
 		}
 
 	case "unlatch":
 		if len(args) < 2 {
-			fmt.Println("./nuki-cli", args[0], "<nukiID>")
+			logger.Println("./nuki-cli", args[0], "<nukiID>")
 			os.Exit(0)
 		}
 		nukiID, err := strconv.Atoi(args[1])
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 		res, err := n.LockAction(nukiID, nuki.ActionUnlatch, false)
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
-		fmt.Printf("%s %s", res.Success, res.BatteryCritical)
+		logger.WithFields(log.Fields{
+			"action":          "unlatch",
+			"nukiID":          nukiID,
+			"success":         res.Success,
+			"batteryCritical": res.BatteryCritical,
+		}).Info()
 
 	case "lock":
 		if len(args) < 2 {
-			fmt.Println("./nuki-cli", args[0], "<nukiID>")
+			logger.Println("./nuki-cli", args[0], "<nukiID>")
 			os.Exit(0)
 		}
 
 		nukiID, err := strconv.Atoi(flag.Args()[1])
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 		res, err := n.LockAction(nukiID, nuki.ActionLock, false)
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
-		fmt.Printf("%s %s", res.Success, res.BatteryCritical)
+		logger.WithFields(log.Fields{
+			"action":          "lock",
+			"nukiID":          nukiID,
+			"success":         res.Success,
+			"batteryCritical": res.BatteryCritical,
+		}).Info()
 
 	case "unlock":
 		if len(args) < 2 {
@@ -139,7 +157,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%s %s", res.Success, res.BatteryCritical)
+
+		logger.WithFields(log.Fields{
+			"action":          "unlock",
+			"nukiID":          nukiID,
+			"success":         res.Success,
+			"batteryCritical": res.BatteryCritical,
+		}).Info()
+
 	default:
 		fmt.Println("unknown command")
 		commands()
