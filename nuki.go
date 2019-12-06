@@ -15,42 +15,50 @@ import (
 	"time"
 )
 
-const (
-	baseURL = "http://%s:%s/%s"
-)
-
-var client *http.Client
-
-func init() {
-	client = &http.Client{
-		Timeout: 10 * time.Second,
-	}
+// Client is the interface implemented by types that can deliver a http response
+// based on the given request.
+type Client interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // Nuki holds you access token and connection information
 type Nuki struct {
-	ip    string
-	port  string
-	token string
+	address string
+	token   string
+	http    Client
+}
+
+// Option is used
+type Option func(*Nuki)
+
+// WithToken allows to set a token when creating a Nuki.
+func WithToken(t string) Option {
+	return func(n *Nuki) {
+		n.token = t
+	}
+}
+
+// WithHTTPClient allows to set a Client when creating a Nuki.
+func WithHTTPClient(c Client) Option {
+	return func(n *Nuki) {
+		n.http = c
+	}
 }
 
 // NewNuki returns a new nuki entrypoint without a token
 // to request a new token, the auth function can be called.
 // this connects to the bridge and stores the token internally.
-func NewNuki(ip, port string) *Nuki {
-	return &Nuki{
-		ip:   ip,
-		port: port,
+func NewNuki(address string, opts ...Option) *Nuki {
+	n := &Nuki{
+		address: address,
+		http: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
-}
-
-// NewNukiWithToken returns a new nuki entrypoint
-func NewNukiWithToken(ip, port, token string) *Nuki {
-	return &Nuki{
-		ip:    ip,
-		port:  port,
-		token: token,
+	for _, o := range opts {
+		o(n)
 	}
+	return n
 }
 
 // Token returns a token provided by nuki
@@ -59,13 +67,13 @@ func (n *Nuki) Token() string {
 }
 
 func (n *Nuki) doRequest(method, path string, i interface{}, param url.Values) error {
-	url := fmt.Sprintf(baseURL, n.ip, n.port, path)
+	url := fmt.Sprintf("http://%s/%s", n.address, path)
 	r, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return err
 	}
 	r.URL.RawQuery = param.Encode()
-	res, err := client.Do(r)
+	res, err := n.http.Do(r)
 	if err != nil {
 		return err
 	}
