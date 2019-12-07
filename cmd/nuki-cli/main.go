@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httputil"
 	"os"
 	"strconv"
 
@@ -15,62 +17,65 @@ import (
 
 var version string
 
-var (
-	conf config
-)
-
-func init() {
-	c := flag.String("-c", "access.json", "config file")
-	ip := flag.String("--ip", "", "ip addr")
-	port := flag.String("--port", "", "port")
-	token := flag.String("--token", "", "token")
-	auth := flag.Bool("--auth", false, "set auth to authenticate")
-	flag.Parse()
-
-	b, err := ioutil.ReadFile(*c)
-	if err == nil {
-		if err := json.Unmarshal(b, &conf); err != nil {
-			log.Println(*c, "parsing error")
-		}
-	} else {
-		log.Println(*c, "not Found!")
-	}
-
-	if *ip != "" {
-		conf.IP = *ip
-	}
-	if *port != "" {
-		conf.Port = *port
-	}
-	if *token != "" {
-		conf.Token = *token
-	}
-	conf.Auth = *auth
+type config struct {
+	Address string `json:"address"`
+	Token   string `json:"token"`
+	Auth    bool
 }
 
-type config struct {
-	IP    string `json:"ip"`
-	Port  string `json:"port"`
-	Token string `json:"token"`
-	Auth  bool
+type raw struct{ logger log.FieldLogger }
+
+func (r raw) Do(req *http.Request) (*http.Response, error) {
+	b, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return nil, err
+	}
+	r.logger.Infof("raw:\n%s", string(b))
+	os.Exit(0)
+	return &http.Response{}, nil
 }
 
 func main() {
+	var conf config
+	flag.StringVar(&conf.Address, "address", "", "address e.g.: 192.168.1.100:1234")
+	flag.StringVar(&conf.Token, "token", "", "token e.g.: 12345")
+	flag.BoolVar(&conf.Auth, "auth", false, "set auth to get a token")
+	c := flag.String("-c", "", "config file")
+	levelDebug := flag.Bool("debug", false, "use debug log level")
+	dump := flag.Bool("dump", false, "print http request")
+	flag.Parse()
+
 	logger := log.New()
+	if *levelDebug {
+		logger.SetLevel(log.DebugLevel)
+	}
+
+	if *c != "" {
+		b, err := ioutil.ReadFile(*c)
+		if err != nil {
+			logger.Fatalln(err)
+		}
+		if err := json.Unmarshal(b, &conf); err != nil {
+			logger.Fatalln(*c, "parsing error")
+		}
+	}
+
 	logger.Infof("Version %s", version)
-	var n *nuki.Nuki
+	var opts []nuki.Option
+	if conf.Token != "" {
+		opts = append(opts, nuki.WithToken(conf.Token))
+	}
+	if *dump {
+		opts = append(opts, nuki.WithHTTPClient(&raw{logger: logger}))
+	}
+	n := nuki.NewNuki(conf.Address, opts...)
 	if conf.Auth {
-		n = nuki.NewNuki(conf.IP, conf.Port)
-		log.Println("Start Authentication")
-		if err := n.Auth; err != nil {
-			log.Fatalln("Authentication failed")
+		logger.Debug("Start Authentication")
+		if _, err := n.Auth(); err != nil {
+			logger.Fatalf("Authentication failed: %s", err.Error())
 		}
-		log.Println("Authentication successful, your token is:", n.Token())
-	} else {
-		if conf.Token == "" {
-			log.Fatalln("missing token")
-		}
-		n = nuki.NewNukiWithToken(conf.IP, conf.Port, conf.Token)
+		logger.Info("Authentication successful, your token is:", n.Token())
+		return
 	}
 
 	commands := func() {
